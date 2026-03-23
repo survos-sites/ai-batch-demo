@@ -18,9 +18,11 @@ class Postcard
     public string $id;
 
     #[ORM\Column(length: 255)]
+    #[Map(source: 'title')]
     public string $title = '';
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Map(source: 'description')]
     public ?string $description = null;
 
     #[Map(source: 'thumbnail_url')]

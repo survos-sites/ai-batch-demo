@@ -37,8 +37,8 @@ final class LoadPostcardsCommand
         ?int $limit = null,
         #[Option('Delete existing postcards first')]
         bool $reset = false,
-        #[Option('Only import ID and image (skip metadata, for reloading after AI processing)')]
-        bool $imageOnly = false,
+        #[Option('Also load source metadata (title, description, etc.)')]
+        bool $withSource = false,
         #[Option('Fetch and apply batch results after loading')]
         bool $includeBatch = false,
     ): int {
@@ -76,16 +76,21 @@ final class LoadPostcardsCommand
                 ++$updated;
             }
 
-            if ($imageOnly) {
-                $postcard->thumbnailUrl = (string) ($row['thumbnail_url'] ?? '');
-            } else {
-                $this->objectMapper->map(PostcardImportRow::fromArray($row), $postcard);
+            $postcard->thumbnailUrl = (string) ($row['thumbnail_url'] ?? '');
+
+            if ($withSource) {
+                $importRow = PostcardImportRow::fromArray($row);
+                $postcard->title = $importRow->title;
+                $postcard->description = $importRow->description;
+                $postcard->country = $importRow->country;
+                $postcard->state = $importRow->state;
+                $postcard->city = $importRow->city;
             }
             $postcard->rawData = $row;
 
             ++$processed;
 
-            if (0 === $processed % 250) {
+            if (0 === $processed % 50) {
                 $this->entityManager->flush();
             }
         }

@@ -45,13 +45,13 @@ head -n 100 /media/tac/WD-001/mus/data/dc/0p096w19r/20_normalize/obj.jsonl > dat
 
 Here's a complete walkthrough demonstrating the full flow from empty database to enriched data.
 
-### Step 1: Load postcards (images only)
+### Step 1: Load postcards
 
 ```bash
-php bin/console app:load:postcards --reset --image-only
+php bin/console app:load:postcards --reset
 ```
 
-This loads postcards with only ID and image URLs (skip metadata). Postcards are marked as `enriched=false`.
+This loads postcards with only ID and image URLs. Add `--with-source` to also load human-provided metadata (title, description, etc.) for comparison.
 
 ### Step 2: Open the UI - you'll see nothing
 
@@ -120,8 +120,8 @@ The enrich command automatically skips enriched postcards. Use `--force` to re-p
 
 | Command | Description |
 |---------|-------------|
-| `app:load:postcards --reset` | Clear DB and reload all postcards |
-| `app:load:postcards --image-only` | Load only ID + image URLs (faster, for AI processing) |
+| `app:load:postcards --reset` | Clear DB and reload postcards (ID + image only) |
+| `app:load:postcards --with-source` | Also load human-provided metadata |
 
 ### Enriching Postcards
 
