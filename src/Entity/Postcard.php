@@ -56,18 +56,23 @@ class Postcard
     public array $rawData = [];
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Map(source: 'description')]
     public ?string $aiDescription = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Map(source: 'title')]
     public ?string $aiTitle = null;
 
     #[ORM\Column(length: 128, nullable: true)]
+    #[Map(source: 'country')]
     public ?string $aiCountry = null;
 
     #[ORM\Column(length: 128, nullable: true)]
+    #[Map(source: 'state')]
     public ?string $aiState = null;
 
     #[ORM\Column(length: 128, nullable: true)]
+    #[Map(source: 'city')]
     public ?string $aiCity = null;
 
     #[ORM\Column(type: Types::JSON)]

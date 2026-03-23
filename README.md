@@ -116,13 +116,31 @@ The enrich command automatically skips enriched postcards. Use `--force` to re-p
 
 ## Commands Reference
 
+### Loading Data
+
 | Command | Description |
 |---------|-------------|
 | `app:load:postcards --reset` | Clear DB and reload all postcards |
 | `app:load:postcards --image-only` | Load only ID + image URLs (faster, for AI processing) |
+
+### Enriching Postcards
+
+| Command | Description |
+|---------|-------------|
 | `app:enrich:postcards --mode=sync` | Process synchronously (returns after completion) |
 | `app:enrich:postcards --mode=batch` | Submit to OpenAI batch API (returns immediately) |
 | `app:enrich:postcards --force` | Re-process even if already enriched |
+
+### Batch Monitoring
+
+| Command | Description |
+|---------|-------------|
+| `app:fetch-batch` | Interactively select and check batch status |
+| `app:fetch-batch {id}` | Check specific batch by ID |
+| `app:fetch-batch {id} --watch` | Poll until batch completes |
+| `ai:batch:list` | List recent batches from OpenAI API |
+| `ai:batch:status {id}` | Show status of a specific batch |
+| `ai:batch:wait {id}` | Poll until batch completes |
 
 ## Run the Demo
 

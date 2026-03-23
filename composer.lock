@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ddfcb1a3d163d2a77c3f4beb5edfb09e",
+    "content-hash": "7492614265d99deba601338632ed558d",
     "packages": [
         {
             "name": "composer/semver",
@@ -8423,16 +8423,16 @@
         },
         {
             "name": "tacman/ai-batch-bundle",
-            "version": "0.2",
+            "version": "0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/tacman/ai-batch-bundle.git",
-                "reference": "282dcbda9c9fd00d772235bbda431374541d9367"
+                "reference": "9ae8168c200fc96805755a5838fc1d9e30869128"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tacman/ai-batch-bundle/zipball/282dcbda9c9fd00d772235bbda431374541d9367",
-                "reference": "282dcbda9c9fd00d772235bbda431374541d9367",
+                "url": "https://api.github.com/repos/tacman/ai-batch-bundle/zipball/9ae8168c200fc96805755a5838fc1d9e30869128",
+                "reference": "9ae8168c200fc96805755a5838fc1d9e30869128",
                 "shasum": ""
             },
             "require": {
@@ -8487,9 +8487,9 @@
             ],
             "support": {
                 "issues": "https://github.com/tacman/ai-batch-bundle/issues",
-                "source": "https://github.com/tacman/ai-batch-bundle/tree/0.2"
+                "source": "https://github.com/tacman/ai-batch-bundle/tree/0.3"
             },
-            "time": "2026-03-23T03:14:55+00:00"
+            "time": "2026-03-23T15:35:09+00:00"
         },
         {
             "name": "twig/extra-bundle",
@@ -11050,7 +11050,8 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "symfony/ai": 20
+        "symfony/ai": 20,
+        "tacman/ai-batch-bundle": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

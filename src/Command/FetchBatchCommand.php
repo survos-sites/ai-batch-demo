@@ -3,142 +3,256 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Entity\BatchRun;
-use App\Service\BatchRunManager;
-use Symfony\AI\Platform\Batch\BatchResult;
+use App\Import\PostcardAiResultRow;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\ObjectMapper\ObjectMapperInterface;
+use Tacman\AiBatch\Entity\AiBatch;
+use Tacman\AiBatch\Entity\AiBatchResult;
+use Tacman\AiBatch\Service\SymfonyBatchPlatformClient;
 
-/**
- * Check the status of a submitted batch and display results when ready.
- *
- *   bin/console app:fetch-batch 1
- *   bin/console app:fetch-batch batch_123
- *   bin/console app:fetch-batch 1 --watch
- *   bin/console app:fetch-batch 1 --output=results/batch_123.jsonl
- */
 #[AsCommand('app:fetch-batch', 'Check status and fetch results of a submitted AI batch')]
 final class FetchBatchCommand
 {
+    private string $resultsDir;
+
     public function __construct(
-        private readonly BatchRunManager $batchRuns,
-    ) {}
+        private readonly EntityManagerInterface $entityManager,
+        private readonly SymfonyBatchPlatformClient $batchClient,
+        private readonly ObjectMapperInterface $objectMapper,
+    ) {
+        $this->resultsDir = 'var/batch-results';
+    }
 
     public function __invoke(
         SymfonyStyle $io,
-        #[Argument('Local ID or provider batch ID')] string $batch,
-        #[Option('Poll every 30 seconds until complete')] bool $watch = false,
+        #[Argument('Batch ID (local DB ID or provider batch ID)')] ?string $batchId = null,
+        #[Option('Fetch and apply results')] bool $fetch = false,
+        #[Option('Poll until complete')] bool $watch = false,
         #[Option('Poll interval in seconds')] int $interval = 30,
-        #[Option('Save results to file (defaults to var/batch-results/{providerId}.jsonl)')] ?string $output = null,
     ): int {
-        $run = $this->batchRuns->findByReference($batch);
-        if (null === $run) {
-            $io->error(sprintf('No batch run found for "%s".', $batch));
+        $batch = null;
 
+        if ($batchId) {
+            $batch = $this->findBatch($batchId);
+        } else {
+            $batch = $this->promptForBatch($io);
+        }
+
+        if (!$batch) {
             return Command::FAILURE;
         }
 
-        // Skip if already downloaded
-        if ($output && file_exists($output)) {
-            $io->success(sprintf('Results already saved to %s', $output));
-            return Command::SUCCESS;
+        $io->title(sprintf('Batch #%d (%s)', $batch->id, $batch->providerBatchId ?? 'N/A'));
+        $this->printStatus($io, $batch);
+
+        if ($batch->providerBatchId) {
+            $providerBatch = $this->batchClient->checkBatch($batch->providerBatchId);
+            $batch->applyProviderStatus(
+                $providerBatch->status ?? 'in_progress',
+                $providerBatch->completedCount ?? 0,
+                $providerBatch->failedCount ?? 0,
+                $providerBatch->outputFileId ?? null,
+                $providerBatch->errorFileId ?? null,
+            );
+            $this->entityManager->flush();
+            $this->printStatus($io, $batch);
         }
 
-        $io->title(sprintf('Batch %d (%s)', $run->getId(), $run->getProviderBatchId()));
-
-        do {
-            $run = $this->batchRuns->refresh($run);
-            $this->printStatus($io, $run);
-
-            if ('completed' === $run->getStatus()) {
-                $results = $this->batchRuns->fetchResults($run);
-                $this->printResults($io, $results);
-
-                if (null === $output) {
-                    $output = sprintf('var/batch-results/%s.jsonl', $run->getProviderBatchId());
-                }
-
-                if ($output) {
-                    $this->batchRuns->saveResults($run, $output, $results);
-                    $io->success(sprintf('Results saved to %s', $output));
-                }
-
-                return Command::SUCCESS;
-            }
-
-            if (in_array($run->getStatus(), ['failed', 'cancelled', 'expired'], true)) {
-                $io->error(sprintf('Batch failed with status: %s', $run->getStatus()));
-                return Command::FAILURE;
-            }
-
-            if ($watch) {
-                $io->writeln(sprintf('  Waiting %d seconds...', $interval));
+        if ($watch && $batch->status !== 'completed' && $batch->status !== 'failed') {
+            do {
+                $io->writeln(sprintf('Waiting %d seconds...', $interval));
                 sleep($interval);
-            }
 
-        } while ($watch && !in_array($run->getStatus(), ['completed', 'failed', 'cancelled', 'expired'], true));
+                $providerBatch = $this->batchClient->checkBatch($batch->providerBatchId);
+                $batch->applyProviderStatus(
+                    $providerBatch->status ?? 'in_progress',
+                    $providerBatch->completedCount ?? 0,
+                    $providerBatch->failedCount ?? 0,
+                    $providerBatch->outputFileId ?? null,
+                    $providerBatch->errorFileId ?? null,
+                );
+                $this->entityManager->flush();
+                $this->printStatus($io, $batch);
+            } while ($batch->status !== 'completed' && $batch->status !== 'failed');
+        }
 
-        if (!in_array($run->getStatus(), ['completed', 'failed', 'cancelled', 'expired'], true)) {
-            $io->note([
-                'Still processing. Check again with:',
-                sprintf('  bin/console app:fetch-batch %s', (string) $run->getId()),
-                '',
-                'Or watch continuously with:',
-                sprintf('  bin/console app:fetch-batch %s --watch', (string) $run->getId()),
-            ]);
+        if ($fetch && $batch->status === 'completed') {
+            $this->fetchAndApplyResults($io, $batch);
         }
 
         return Command::SUCCESS;
     }
 
-    private function printStatus(SymfonyStyle $io, BatchRun $run): void
+    private function fetchAndApplyResults(SymfonyStyle $io, AiBatch $batch): void
     {
-        $isTerminal = in_array($run->getStatus(), ['completed', 'failed', 'cancelled', 'expired'], true);
-        $statusEmoji = in_array($run->getStatus(), ['failed', 'cancelled', 'expired'], true) ? 'X' : ($isTerminal ? 'OK' : '...');
+        $io->section('Fetching results...');
+
+        if (!is_dir($this->resultsDir)) {
+            mkdir($this->resultsDir, 0775, true);
+        }
+
+        $providerJob = $this->batchClient->checkBatch($batch->providerBatchId);
+        $count = 0;
+        $failed = 0;
+        $resultsLines = [];
+
+        foreach ($this->batchClient->fetchResults($providerJob) as $result) {
+            $resultEntity = new AiBatchResult();
+            $resultEntity->aiBatchId = $batch->id;
+            $resultEntity->customId = $result->customId;
+            $resultEntity->success = $result->success;
+            $resultEntity->content = $result->content;
+            $resultEntity->promptTokens = $result->promptTokens;
+            $resultEntity->outputTokens = $result->outputTokens;
+            $resultEntity->createdAt = new \DateTimeImmutable();
+
+            $resultsLines[] = json_encode([
+                'id' => $result->customId,
+                'success' => $result->success,
+                'content' => $result->content,
+                'prompt_tokens' => $result->promptTokens,
+                'output_tokens' => $result->outputTokens,
+            ], JSON_THROW_ON_ERROR);
+
+            if ($result->success) {
+                $count++;
+                $postcard = $this->entityManager->find(\App\Entity\Postcard::class, $result->customId);
+                if ($postcard) {
+                    $this->applyResultToPostcard($postcard, $result->content, $result->promptTokens, $result->outputTokens);
+                    $io->writeln(sprintf('  Applied: %s', $result->customId));
+                }
+            } else {
+                $failed++;
+                $resultEntity->error = $result->error ?? 'Unknown error';
+                $io->error(sprintf('  Failed: %s - %s', $result->customId, $result->error));
+            }
+
+            $this->entityManager->persist($resultEntity);
+        }
+
+        if (!empty($resultsLines)) {
+            $resultsFile = sprintf('%s/%s.jsonl', $this->resultsDir, $batch->providerBatchId);
+            file_put_contents($resultsFile, implode("\n", $resultsLines) . "\n");
+            $io->writeln(sprintf('  Saved results to: %s', $resultsFile));
+        }
+
+        $batch->appliedCount += $count;
+        $this->entityManager->flush();
+
+        $io->success(sprintf('Applied %d results (%d failed).', $count, $failed));
+    }
+
+    private function applyResultToPostcard(\App\Entity\Postcard $postcard, ?string $content, int $promptTokens = 0, int $outputTokens = 0): void
+    {
+        if (!$content) {
+            return;
+        }
+
+        $resultRow = PostcardAiResultRow::fromJson($content);
+        if (!$resultRow) {
+            return;
+        }
+
+        $this->objectMapper->map($resultRow, $postcard);
+
+        $postcard->enriched = true;
+        $postcard->enrichedAt = new \DateTimeImmutable();
+        $postcard->updatedAt = new \DateTimeImmutable();
+        $postcard->promptTokens = $promptTokens ?: null;
+        $postcard->outputTokens = $outputTokens ?: null;
+
+        if (!empty($resultRow->keywords)) {
+            $postcard->syncKeywordDetails($resultRow->keywords);
+        }
+    }
+
+    private function findBatch(string $id): ?AiBatch
+    {
+        if (ctype_digit($id)) {
+            return $this->entityManager->find(AiBatch::class, (int) $id);
+        }
+
+        return $this->entityManager->getRepository(AiBatch::class)
+            ->findOneBy(['providerBatchId' => $id]);
+    }
+
+    private function promptForBatch(SymfonyStyle $io): ?AiBatch
+    {
+        $batches = $this->entityManager->getRepository(AiBatch::class)
+            ->findBy([], ['createdAt' => 'DESC'], 10);
+
+        if (empty($batches)) {
+            $io->error('No batches found.');
+            return null;
+        }
+
+        $choices = [];
+        foreach ($batches as $index => $batch) {
+            $ago = $this->timeAgo($batch->createdAt);
+            $status = $batch->status;
+            $count = $batch->requestCount;
+            $choices[$index] = sprintf('#%d %s %s (%d requests) %s',
+                $batch->id,
+                $status === 'completed' ? '✅' : ($status === 'failed' ? '❌' : '⏳'),
+                $status,
+                $count,
+                $ago
+            );
+        }
+        $choices[] = 'Exit';
+
+        $selected = $io->choice('Select a batch:', $choices, 0);
+
+        if ($selected === 'Exit') {
+            return null;
+        }
+
+        $selectedIndex = array_search($selected, $choices);
+        return $batches[$selectedIndex];
+    }
+
+    private function printStatus(SymfonyStyle $io, AiBatch $batch): void
+    {
+        $emoji = match ($batch->status) {
+            'completed' => '✅',
+            'failed' => '❌',
+            'submitted', 'processing' => '⏳',
+            default => '❓',
+        };
 
         $io->table(
             ['Field', 'Value'],
             [
-                ['Status', $statusEmoji.' '.$run->getStatus()],
-                ['Local ID', (string) $run->getId()],
-                ['Provider ID', $run->getProviderBatchId()],
-                ['Model', $run->getModel()],
-                ['Progress', sprintf('%d / %d (failed: %d)', $run->getProcessedCount(), $run->getRequestCount(), $run->getFailedCount())],
-                ['Submitted', $run->getSubmittedAt()->format('Y-m-d H:i:s')],
-                ['Last polled', $run->getLastPolledAt()?->format('Y-m-d H:i:s') ?? '-'],
+                ['Status', $emoji . ' ' . $batch->status],
+                ['Local ID', (string) $batch->id],
+                ['Provider ID', $batch->providerBatchId ?? '-'],
+                ['Model', $batch->meta['model'] ?? '-'],
+                ['Requests', (string) $batch->requestCount],
+                ['Completed', (string) $batch->completedCount],
+                ['Failed', (string) $batch->failedCount],
+                ['Applied', (string) $batch->appliedCount],
+                ['Created', $batch->createdAt->format('Y-m-d H:i:s')],
             ]
         );
     }
 
-    /**
-     * @param iterable<BatchResult> $results
-     */
-    private function printResults(SymfonyStyle $io, iterable $results): void
+    private function timeAgo(\DateTimeInterface $date): string
     {
-        $io->section('Results');
-
-        $count = 0;
-
-        foreach ($results as $result) {
-            if (!$result->isSuccess()) {
-                $io->writeln(sprintf('  [ERROR] <error>%s: %s</error>', $result->getId(), $result->getError()));
-                continue;
-            }
-
-            // Parse product id from custom_id "product_{id}"
-            $productId = str_replace('product_', '', $result->getId());
-            $copy = $result->getContent();
-
-            $io->writeln(sprintf('<info>Product #%s</info>', $productId));
-            $io->writeln(sprintf('  %s', $copy));
-            $io->newLine();
-
-            $count++;
+        $diff = (new \DateTimeImmutable())->diff($date);
+        if ($diff->days > 0) {
+            return $diff->days . 'd ago';
         }
-
-        $io->success(sprintf('%d results displayed.', $count));
+        if ($diff->h > 0) {
+            return $diff->h . 'h ago';
+        }
+        if ($diff->i > 0) {
+            return $diff->i . 'm ago';
+        }
+        return 'just now';
     }
 }

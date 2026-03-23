@@ -167,7 +167,7 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
     private function userPrompt(Postcard $postcard): string
     {
         return trim(sprintf(
-            "Title: %s\nCatalog description: %s\nCountry: %s\nState: %s\nCity: %s\n\nRules:\n- title: short descriptive title for the image\n- description: one sentence, factual, no speculation\n- city/state/country: extract or infer from image or catalog info\n- keywords: array of objects\n- each keyword object has: value, confidence (0..1), basis\n- keep value lowercase and deduplicated\n- basis must be short and concrete",
+            "Title: %s\nCatalog description: %s\nCountry: %s\nState: %s\nCity: %s\n\nRules:\n- title: short descriptive title in title case (capitalize major words)\n- description: one sentence, factual, no speculation\n- city/state/country: extract or infer from image or catalog info\n- keywords: array of objects\n- each keyword object has: value, confidence (0..1), basis\n- keep value lowercase and deduplicated\n- basis must be short and concrete",
             $postcard->title,
             $postcard->description ?? '',
             $postcard->country ?? '',

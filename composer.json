@@ -56,7 +56,7 @@
         "symfony/validator": "^8.1",
         "symfony/web-link": "^8.1",
         "symfony/yaml": "^8.1",
-        "tacman/ai-batch-bundle": "^0.2",
+        "tacman/ai-batch-bundle": "@dev",
         "twig/extra-bundle": "^2.12|^3.24",
         "twig/twig": "^2.12|^3.24"
     },

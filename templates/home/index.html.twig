@@ -3,19 +3,12 @@
 {% block title %}Postcard AI Batch Demo{% endblock %}
 
 {% block body %}
-    <div class="container py-4">
+    <div class="container-fluid py-4">
         <div class="row g-4 mb-4">
             <div class="col-12">
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
                         <h1 class="h3 mb-3">Postcard AI Batch Demo</h1>
-                        <p class="mb-3 text-secondary">
-                            Demo application for Symfony AI + tacman/ai-batch-bundle: seed postcard metadata,
-                            enrich with AI (sync or batch), persist provider runs/results, and browse everything in one place.
-                        </p>
-                        <div class="mb-3">
-                            <a href="{{ path('tacman_ai_batch_ui_index') }}" class="btn btn-sm btn-outline-primary">Open Generic Batch UI</a>
-                        </div>
                         <div class="row row-cols-2 row-cols-md-4 g-3">
                             <div class="col"><div class="p-3 rounded bg-light"><div class="small text-muted">Postcards</div><div class="h4 mb-0">{{ postcardCount }}</div></div></div>
                             <div class="col"><div class="p-3 rounded bg-light"><div class="small text-muted">Enriched</div><div class="h4 mb-0">{{ enrichedCount }}</div></div></div>
@@ -27,18 +20,45 @@
             </div>
         </div>
 
-        <div class="row g-4">
+        <div class="row g-4 mb-4">
             <div class="col-12">
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
-                        <h2 class="h5 mb-3">Search Postcards</h2>
                         <twig:Mezcalito:UxSearch:Layout name="postcard" />
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="col-12 col-xl-4 order-xl-first">
-                <div class="card shadow-sm border-0 mb-4">
+        <div class="row g-4">
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h2 class="h6 mb-3">Recent changes</h2>
+                        <ul class="list-group list-group-flush">
+                            {% for postcard in latestPostcards %}
+                                <li class="list-group-item px-0">
+                                    <div class="fw-semibold">
+                                        <a href="{{ path('app_postcard_show', {id: postcard.id}) }}">
+                                            {{ postcard.aiTitle ?: postcard.title ?: postcard.id|split(':')|last }}
+                                        </a>
+                                    </div>
+                                    {% if postcard.aiDescription %}
+                                        <div class="small text-muted text-truncate">{{ postcard.aiDescription }}</div>
+                                    {% elseif not postcard.aiTitle and not postcard.title %}
+                                        <div class="small text-muted">{{ postcard.id }}</div>
+                                    {% endif %}
+                                </li>
+                            {% else %}
+                                <li class="list-group-item px-0 text-muted">No postcards yet</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
                         <h2 class="h6 mb-3">Recent Batches</h2>
                         <div class="table-responsive">
@@ -65,8 +85,10 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="card shadow-sm border-0 mb-4">
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
                         <h2 class="h6 mb-3">Recent Batch Results</h2>
                         <ul class="list-group list-group-flush">
@@ -84,30 +106,6 @@
                                 </li>
                             {% else %}
                                 <li class="list-group-item px-0 text-muted">No batch results yet</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm border-0">
-                    <div class="card-body p-4">
-                        <h2 class="h6 mb-3">Recent changes</h2>
-                        <ul class="list-group list-group-flush">
-                            {% for postcard in latestPostcards %}
-                                <li class="list-group-item px-0">
-                                    <div class="fw-semibold">
-                                        <a href="{{ path('app_postcard_show', {id: postcard.id}) }}">
-                                            {{ postcard.aiTitle ?: postcard.title ?: postcard.id|split(':')|last }}
-                                        </a>
-                                    </div>
-                                    {% if postcard.aiDescription %}
-                                        <div class="small text-muted text-truncate">{{ postcard.aiDescription }}</div>
-                                    {% elseif not postcard.aiTitle and not postcard.title %}
-                                        <div class="small text-muted">{{ postcard.id }}</div>
-                                    {% endif %}
-                                </li>
-                            {% else %}
-                                <li class="list-group-item px-0 text-muted">No postcards yet</li>
                             {% endfor %}
                         </ul>
                     </div>

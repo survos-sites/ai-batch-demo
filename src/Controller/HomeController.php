@@ -29,7 +29,12 @@ final class HomeController extends AbstractController
             'batchResultCount' => $batchResultRepository->count([]),
             'latestBatches' => $batchRepository->findBy([], ['createdAt' => 'DESC'], 10),
             'latestBatchResults' => $batchResultRepository->findBy([], ['createdAt' => 'DESC'], 10),
-            'latestPostcards' => $postcardRepository->findBy([], ['updatedAt' => 'DESC'], 8),
+            'latestPostcards' => $postcardRepository->createQueryBuilder('p')
+                ->where('p.updatedAt IS NOT NULL')
+                ->orderBy('p.updatedAt', 'DESC')
+                ->setMaxResults(8)
+                ->getQuery()
+                ->getResult(),
         ]);
     }
 
