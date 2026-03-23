@@ -13,4 +13,10 @@ return [
     Symfony\Bundle\SecurityBundle\SecurityBundle::class => ['all' => true],
     Symfony\Bundle\MonologBundle\MonologBundle::class => ['all' => true],
     Symfony\Bundle\MakerBundle\MakerBundle::class => ['dev' => true],
+    Survos\JsonlBundle\SurvosJsonlBundle::class => ['all' => true],
+    Tacman\AiBatch\TacmanAiBatchBundle::class => ['all' => true],
+    Symfony\UX\TwigComponent\TwigComponentBundle::class => ['all' => true],
+    Symfony\UX\LiveComponent\LiveComponentBundle::class => ['all' => true],
+    Mezcalito\UxSearchBundle\MezcalitoUxSearchBundle::class => ['all' => true],
+    Survos\DeploymentBundle\SurvosDeploymentBundle::class => ['dev' => true, 'test' => true],
 ];

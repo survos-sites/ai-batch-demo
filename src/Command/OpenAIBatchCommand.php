@@ -3,8 +3,8 @@
 namespace App\Command;
 
 use Symfony\AI\Platform\Batch\BatchInput;
-use Symfony\AI\Platform\Batch\BatchJobInterface;
-use Symfony\AI\Platform\Batch\BatchResultInterface;
+use Symfony\AI\Platform\Batch\BatchJob;
+use Symfony\AI\Platform\Batch\BatchResult;
 use Symfony\AI\Platform\Bridge\OpenAi\PlatformFactory;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -151,7 +151,7 @@ class OpenAIBatchCommand extends Command
     /**
      * @return array<string, mixed>
      */
-    private function extractJobData(BatchJobInterface $job): array
+    private function extractJobData(BatchJob $job): array
     {
         return [
             'id' => $job->getId(),
@@ -173,12 +173,12 @@ class OpenAIBatchCommand extends Command
     }
 
     /**
-     * @param array<int, BatchResultInterface> $results
+     * @param array<int, BatchResult> $results
      * @return array<int, array<string, mixed>>
      */
     private function extractResultsData(array $results): array
     {
-        return array_map(function (BatchResultInterface $result): array {
+        return array_map(function (BatchResult $result): array {
             $data = [
                 'id' => $result->getId(),
                 'success' => $result->isSuccess(),
@@ -189,14 +189,6 @@ class OpenAIBatchCommand extends Command
 
             if (!$result->isSuccess()) {
                 $data['error'] = $result->getError();
-            }
-
-            if (method_exists($result, 'getFinishReason')) {
-                $data['finish_reason'] = $result->getFinishReason();
-            }
-
-            if (method_exists($result, 'getMetadata')) {
-                $data['metadata'] = $result->getMetadata();
             }
 
             return $data;

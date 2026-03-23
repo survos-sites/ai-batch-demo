@@ -9,3 +9,7 @@
 
 controllers:
     resource: routing.controllers
+
+tacman_ai_batch_ui:
+    resource: '@TacmanAiBatchBundle/src/Controller/'
+    type: attribute

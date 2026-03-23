@@ -1,0 +1,110 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Postcard AI Batch Demo{% endblock %}
+
+{% block body %}
+    <div class="container py-4">
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h1 class="h3 mb-3">Postcard AI Batch Demo</h1>
+                        <p class="mb-3 text-secondary">
+                            Demo application for Symfony AI + tacman/ai-batch-bundle: seed postcard metadata,
+                            enrich with AI (sync or batch), persist provider runs/results, and browse everything in one place.
+                        </p>
+                        <div class="mb-3">
+                            <a href="{{ path('tacman_ai_batch_ui_index') }}" class="btn btn-sm btn-outline-primary">Open Generic Batch UI</a>
+                        </div>
+                        <div class="row row-cols-2 row-cols-md-4 g-3">
+                            <div class="col"><div class="p-3 rounded bg-light"><div class="small text-muted">Postcards</div><div class="h4 mb-0">{{ postcardCount }}</div></div></div>
+                            <div class="col"><div class="p-3 rounded bg-light"><div class="small text-muted">Enriched</div><div class="h4 mb-0">{{ enrichedCount }}</div></div></div>
+                            <div class="col"><div class="p-3 rounded bg-light"><div class="small text-muted">Batches</div><div class="h4 mb-0">{{ batchCount }}</div></div></div>
+                            <div class="col"><div class="p-3 rounded bg-light"><div class="small text-muted">Batch Results</div><div class="h4 mb-0">{{ batchResultCount }}</div></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-xl-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h2 class="h5 mb-3">Search Postcards</h2>
+                        <twig:Mezcalito:UxSearch:Layout name="postcard" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-4">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h6 mb-3">Recent Batches</h2>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                    <th>Req</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for batch in latestBatches %}
+                                    <tr>
+                                        <td><a href="{{ path('tacman_ai_batch_ui_show', {id: batch.id}) }}">#{{ batch.id }}</a></td>
+                                        <td><span class="badge text-bg-secondary">{{ batch.status }}</span></td>
+                                        <td>{{ batch.requestCount }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="3" class="text-muted">No batches yet</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h6 mb-3">Recent Batch Results</h2>
+                        <ul class="list-group list-group-flush">
+                            {% for result in latestBatchResults %}
+                                <li class="list-group-item px-0 d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="fw-semibold">{{ result.customId }}</div>
+                                        <div class="small text-muted">Batch #{{ result.aiBatchId }}</div>
+                                    </div>
+                                    {% if result.success %}
+                                        <span class="badge text-bg-success">ok</span>
+                                    {% else %}
+                                        <span class="badge text-bg-danger">error</span>
+                                    {% endif %}
+                                </li>
+                            {% else %}
+                                <li class="list-group-item px-0 text-muted">No batch results yet</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h2 class="h6 mb-3">Latest Enriched Postcards</h2>
+                        <ul class="list-group list-group-flush">
+                            {% for postcard in latestPostcards %}
+                                <li class="list-group-item px-0">
+                                    <div class="fw-semibold"><a href="{{ path('app_postcard_show', {id: postcard.id}) }}">{{ postcard.title }}</a></div>
+                                    <div class="small text-muted">{{ postcard.id }}</div>
+                                </li>
+                            {% else %}
+                                <li class="list-group-item px-0 text-muted">No postcards yet</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

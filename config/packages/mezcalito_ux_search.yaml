@@ -1,0 +1,4 @@
+mezcalito_ux_search:
+    default_adapter: 'default'
+    adapters:
+        default: '%env(MEZCALITO_UX_SEARCH_DEFAULT_DSN)%'

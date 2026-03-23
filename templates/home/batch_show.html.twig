@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Batch #{{ batch.id }}{% endblock %}
+
+{% block body %}
+    <div class="container py-4">
+        <div class="mb-3">
+            <a href="{{ path('app_home') }}" class="btn btn-outline-secondary btn-sm">Back</a>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-3">Batch #{{ batch.id }}</h1>
+                <div class="row g-3">
+                    <div class="col-md-3"><div class="small text-muted">Provider</div><div>{{ batch.provider }}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">Provider ID</div><div>{{ batch.providerBatchId }}</div></div>
+                    <div class="col-md-2"><div class="small text-muted">Status</div><div><span class="badge text-bg-secondary">{{ batch.status }}</span></div></div>
+                    <div class="col-md-2"><div class="small text-muted">Requests</div><div>{{ batch.requestCount }}</div></div>
+                    <div class="col-md-2"><div class="small text-muted">Applied</div><div>{{ batch.appliedCount }}</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">Results</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                        <tr>
+                            <th>Custom ID</th>
+                            <th>Status</th>
+                            <th>Prompt</th>
+                            <th>Output</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for result in results %}
+                            <tr>
+                                <td>{{ result.customId }}</td>
+                                <td>
+                                    {% if result.success %}
+                                        <span class="badge text-bg-success">ok</span>
+                                    {% else %}
+                                        <span class="badge text-bg-danger">error</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ result.promptTokens }}</td>
+                                <td>{{ result.outputTokens }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4">
+                                    <pre class="small bg-light p-2 rounded mb-0" style="max-height: 180px; overflow: auto;">{{ result.raw|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="4" class="text-muted">No stored results for this batch yet.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

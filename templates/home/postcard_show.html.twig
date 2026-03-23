@@ -1,0 +1,196 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Postcard {{ postcard.id }}{% endblock %}
+
+{% block body %}
+    <div class="container py-4">
+        <div class="mb-3 d-flex gap-2">
+            <a href="{{ path('app_home') }}" class="btn btn-outline-secondary btn-sm">Back to home</a>
+            <a href="{{ path('tacman_ai_batch_ui_index') }}" class="btn btn-outline-secondary btn-sm">Batch UI</a>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-1">{{ postcard.title }}</h1>
+                <div class="small text-muted mb-3">{{ postcard.id }}</div>
+
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <h2 class="h6">Image</h2>
+                        {% if postcard.thumbnailUrl %}
+                            <img src="{{ postcard.thumbnailUrl }}" class="img-fluid rounded border mb-2" alt="{{ postcard.title }}">
+                            <div class="small">
+                                <a href="{{ postcard.thumbnailUrl }}" target="_blank" rel="noopener noreferrer">Open image URL</a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-light border mb-2">No image URL.</div>
+                        {% endif %}
+                        <div class="small text-muted mt-1">Visual source used by AI</div>
+                    </div>
+
+                    <div class="col-lg-8">
+                        <h2 class="h6">Common Fields (Side-by-Side)</h2>
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Source</th>
+                                <th>AI</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <th>ID</th>
+                                <td><code>{{ postcard.id }}</code></td>
+                                <td class="text-muted">-</td>
+                            </tr>
+                            <tr>
+                                <th>Title</th>
+                                <td>{{ postcard.title ?: '-' }}</td>
+                                <td>{{ postcard.title ?: '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Catalog Description</th>
+                                <td>{{ postcard.description ?: '-' }}</td>
+                                <td>{{ postcard.description ?: '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Country</th>
+                                <td>{{ postcard.country ?: '-' }}</td>
+                                <td>{{ postcard.country ?: '-' }} <em class="text-muted">Accepted from source</em></td>
+                            </tr>
+                            <tr>
+                                <th>State</th>
+                                <td>{{ postcard.state ?: '-' }}</td>
+                                <td>{{ postcard.state ?: '-' }} <em class="text-muted">Accepted from source</em></td>
+                            </tr>
+                            <tr>
+                                <th>City</th>
+                                <td>{{ postcard.city ?: '-' }}</td>
+                                <td>{{ postcard.city ?: '-' }} <em class="text-muted">Accepted from source</em></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">AI Enrichment Step Detail</h2>
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <h3 class="h6">New AI Fields</h3>
+                        <table class="table table-sm align-middle mb-0">
+                            <tbody>
+                            <tr>
+                                <th class="w-25">AI Description</th>
+                                <td>{{ postcard.aiDescription ?: '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>AI Keywords</th>
+                                <td>
+                                    {% if keywordDetails is empty %}
+                                        <span class="text-muted">none</span>
+                                    {% else %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm mb-0">
+                                                <thead>
+                                                <tr>
+                                                    <th>Keyword</th>
+                                                    <th>Confidence</th>
+                                                    <th>Basis</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                {% for keyword in keywordDetails %}
+                                                    <tr>
+                                                        <td><span class="badge text-bg-light">{{ keyword.value }}</span></td>
+                                                        <td>{{ keyword.confidence is null ? '-' : (keyword.confidence * 100)|number_format(0) ~ '%' }}</td>
+                                                        <td class="small text-muted">{{ keyword.basis ?: '-' }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Enriched At</th>
+                                <td>{{ postcard.enrichedAt ? postcard.enrichedAt|date('Y-m-d H:i:s') : '-' }}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <h3 class="h6">Model + Prompt + Tokens</h3>
+                        <div class="small mb-2"><strong>Model:</strong> {{ modelName }}</div>
+                        <div class="small mb-2"><strong>Prompt tokens:</strong> {{ latestBatchResult ? latestBatchResult.promptTokens : '-' }}</div>
+                        <div class="small mb-3"><strong>Output tokens:</strong> {{ latestBatchResult ? latestBatchResult.outputTokens : '-' }}</div>
+                        <pre class="small bg-light p-2 rounded mb-0" style="max-height: 260px; overflow: auto;">{{ promptPreview }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">Input Record JSON</h2>
+                <andypf-json-viewer
+                        class="d-block border rounded"
+                        expanded="2"
+                        show-toolbar="true"
+                        data='{{ postcard.rawData|json_encode|e('html_attr') }}'
+                ></andypf-json-viewer>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">AI Enrichment JSON</h2>
+                <andypf-json-viewer
+                        class="d-block border rounded"
+                        expanded="2"
+                        show-toolbar="true"
+                        data='{{ {
+                            model: modelName,
+                            prompt_tokens: latestBatchResult ? latestBatchResult.promptTokens : null,
+                            output_tokens: latestBatchResult ? latestBatchResult.outputTokens : null,
+                            description: postcard.aiDescription,
+                            keywords: keywordDetails,
+                            enriched_at: postcard.enrichedAt ? postcard.enrichedAt|date('c') : null
+                        }|json_encode|e('html_attr') }}'
+                ></andypf-json-viewer>
+            </div>
+        </div>
+
+        {% if latestBatchResult and latestBatchResult.raw %}
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3">Latest Batch Result Raw JSON</h2>
+                    <andypf-json-viewer
+                            class="d-block border rounded"
+                            expanded="1"
+                            show-toolbar="true"
+                            data='{{ latestBatchResult.raw|json_encode|e('html_attr') }}'
+                    ></andypf-json-viewer>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">Final Record JSON</h2>
+                <andypf-json-viewer
+                        class="d-block border rounded"
+                        expanded="2"
+                        show-toolbar="true"
+                        data='{{ finalRecord|json_encode|e('html_attr') }}'
+                ></andypf-json-viewer>
+            </div>
+        </div>
+    </div>
+{% endblock %}

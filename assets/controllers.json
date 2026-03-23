@@ -9,6 +9,26 @@
                 "enabled": false,
                 "fetch": "eager"
             }
+        },
+        "@symfony/ux-live-component": {
+            "live": {
+                "enabled": true,
+                "fetch": "eager"
+            }
+        },
+        "@mezcalito/ux-search": {
+            "ux-search": {
+                "enabled": true,
+                "fetch": "eager"
+            },
+            "ux-search--refinement-list": {
+                "enabled": true,
+                "fetch": "eager"
+            },
+            "ux-search-range-slider": {
+                "enabled": true,
+                "fetch": "eager"
+            }
         }
     },
     "entrypoints": []
