@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\EnrichmentStatus;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -88,6 +89,9 @@ class Postcard
 
     #[ORM\Column(nullable: true)]
     public ?bool $enriched = null;
+
+    #[ORM\Column(type: Types::STRING, length: 32, enumType: EnrichmentStatus::class, nullable: true)]
+    public ?EnrichmentStatus $enrichmentStatus = null;
 
     #[ORM\Column(nullable: true)]
     public ?int $promptTokens = null;

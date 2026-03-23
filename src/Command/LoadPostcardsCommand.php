@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\Postcard;
+use App\Enum\EnrichmentStatus;
 use App\Import\PostcardAiResultRow;
-use App\Import\PostcardImportRow;
 use Doctrine\ORM\EntityManagerInterface;
 use Survos\JsonlBundle\IO\JsonlReader;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -41,6 +41,8 @@ final class LoadPostcardsCommand
         bool $withSource = false,
         #[Option('Fetch and apply batch results after loading')]
         bool $includeBatch = false,
+        #[Option('Load IDs from file (one per line)')]
+        ?string $idsFrom = null,
     ): int {
         if (!is_file($path)) {
             $io->error(sprintf('File not found: %s', $path));
@@ -48,8 +50,20 @@ final class LoadPostcardsCommand
             return Command::FAILURE;
         }
 
-        if ($reset) {
-            $this->entityManager->createQuery('DELETE FROM App\\Entity\\Postcard p')->execute();
+if ($reset) {
+            $this->entityManager->createQuery('DELETE FROM App\Entity\Postcard p')->execute();
+        } else {
+            $this->entityManager->createQuery('UPDATE App\Entity\Postcard p SET p.enrichmentStatus = NULL, p.enriched = NULL')->execute();
+        }
+
+        $targetIds = null;
+        if ($idsFrom) {
+            if (!is_file($idsFrom)) {
+                $io->error(sprintf('File not found: %s', $idsFrom));
+                return Command::FAILURE;
+            }
+            $targetIds = array_filter(array_map('trim', file($idsFrom)));
+            $io->writeln(sprintf('Loading %d specific IDs from %s', count($targetIds), $idsFrom));
         }
 
         $repository = $this->entityManager->getRepository(Postcard::class);
@@ -58,19 +72,24 @@ final class LoadPostcardsCommand
         $processed = 0;
 
         foreach (JsonlReader::open($path) as $row) {
-            if (null !== $limit && $processed >= $limit) {
-                break;
-            }
-
             $id = (string) ($row['id'] ?? '');
             if ('' === $id) {
                 continue;
+            }
+
+            if ($targetIds !== null && !in_array($id, $targetIds, true)) {
+                continue;
+            }
+
+            if (null !== $limit && $processed >= $limit) {
+                break;
             }
 
             $postcard = $repository->find($id);
             if (null === $postcard) {
                 $postcard = new Postcard($id);
                 $this->entityManager->persist($postcard);
+                $postcard->enrichmentStatus = EnrichmentStatus::NEW;
                 ++$created;
             } else {
                 ++$updated;
@@ -114,8 +133,9 @@ final class LoadPostcardsCommand
             mkdir($this->resultsDir, 0775, true);
         }
 
-        $batches = $this->entityManager->getRepository(AiBatch::class)
-            ->findBy(['status' => 'completed'], ['createdAt' => 'DESC']);
+        $batchRepo = $this->entityManager->getRepository(AiBatch::class);
+        $postcardRepo = $this->entityManager->getRepository(Postcard::class);
+        $batches = $batchRepo->findBy(['status' => 'completed'], ['createdAt' => 'DESC']);
 
         if (empty($batches)) {
             $io->note('No completed batches found.');
@@ -142,7 +162,7 @@ final class LoadPostcardsCommand
             $resultsLines = [];
 
             foreach ($this->batchClient->fetchResults($providerJob) as $result) {
-                $postcard = $this->entityManager->find(Postcard::class, $result->customId);
+                $postcard = $postcardRepo->find($result->customId);
 
                 if (!$postcard) {
                     $notFound++;
@@ -153,6 +173,11 @@ final class LoadPostcardsCommand
                     continue;
                 }
 
+                if (EnrichmentStatus::FINISHED === $postcard->enrichmentStatus) {
+                    continue;
+                }
+
+                $io->writeln(sprintf('  Applying to: %s', $result->customId));
                 $this->applyResultToPostcard($postcard, $result->content, $result->promptTokens, $result->outputTokens);
                 $applied++;
 
@@ -188,6 +213,7 @@ final class LoadPostcardsCommand
             return;
         }
 
+        $content = $this->stripMarkdownCodeBlocks($content);
         $resultRow = PostcardAiResultRow::fromJson($content);
         if (!$resultRow) {
             return;
@@ -196,6 +222,7 @@ final class LoadPostcardsCommand
         $this->objectMapper->map($resultRow, $postcard);
 
         $postcard->enriched = true;
+        $postcard->enrichmentStatus = EnrichmentStatus::FINISHED;
         $postcard->enrichedAt = new \DateTimeImmutable();
         $postcard->updatedAt = new \DateTimeImmutable();
         $postcard->promptTokens = $promptTokens ?: null;
@@ -204,5 +231,16 @@ final class LoadPostcardsCommand
         if (!empty($resultRow->keywords)) {
             $postcard->syncKeywordDetails($resultRow->keywords);
         }
+    }
+
+    private function stripMarkdownCodeBlocks(string $content): string
+    {
+        if (preg_match('/```json\s*(.*?)\s*```/s', $content, $matches)) {
+            return trim($matches[1]);
+        }
+        if (preg_match('/```\s*(.*?)\s*```/s', $content, $matches)) {
+            return trim($matches[1]);
+        }
+        return $content;
     }
 }

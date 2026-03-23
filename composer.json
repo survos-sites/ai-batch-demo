@@ -7,6 +7,10 @@
     "prefer-stable": true,
     "repositories": [
         {
+            "type": "path",
+            "url": "/home/tac/tacman/ai-batch-bundle"
+        },
+        {
             "type": "vcs",
             "url": "https://github.com/camilleislasse/ai",
             "branch": "feature/batch-processing"

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\AiTask;
 
 use App\Entity\Postcard;
+use App\Enum\EnrichmentStatus;
 use App\Message\EnrichPostcardMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\AI\Platform\Bridge\OpenAi\PlatformFactory;
@@ -55,6 +56,7 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
         $postcard->aiCity = $output->city;
         $postcard->syncKeywordDetails($this->normalizeKeywordDetails($output->keywords));
         $postcard->enriched = true;
+        $postcard->enrichmentStatus = EnrichmentStatus::FINISHED;
         $postcard->enrichedAt = new \DateTimeImmutable();
         $postcard->updatedAt = new \DateTimeImmutable();
         $this->entityManager->flush();
@@ -76,7 +78,8 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
             userPrompt: $this->userPrompt($postcard),
             model: 'gpt-4o-mini',
             imageUrl: $postcard->thumbnailUrl,
-            options: ['max_tokens' => 200],
+            responseFormatClass: PostcardEnrichmentOutput::class,
+            options: ['max_tokens' => 500],
         );
     }
 
@@ -113,6 +116,7 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
         $postcard->aiCity = $output->city;
         $postcard->syncKeywordDetails($this->normalizeKeywordDetails($output->keywords));
         $postcard->enriched = true;
+        $postcard->enrichmentStatus = EnrichmentStatus::FINISHED;
         $postcard->enrichedAt = new \DateTimeImmutable();
         $postcard->updatedAt = new \DateTimeImmutable();
         $this->entityManager->flush();
@@ -161,13 +165,13 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
 
     private function systemPrompt(): string
     {
-        return 'You enrich vintage postcard records. Return a concise visual description, location (city, state, country), and 5-12 lowercase keyword objects. Each keyword must include value, confidence (0..1), and basis (short reason from visible or provided evidence).';
+        return 'You enrich vintage postcard records. Return ONLY valid JSON with this exact structure: {"title":"...","description":"...","country":"...","state":"...","city":"...","keywords":[{"value":"...","confidence":0.9,"basis":"..."}]}';
     }
 
     private function userPrompt(Postcard $postcard): string
     {
         return trim(sprintf(
-            "Title: %s\nCatalog description: %s\nCountry: %s\nState: %s\nCity: %s\n\nRules:\n- title: short descriptive title in title case (capitalize major words)\n- description: one sentence, factual, no speculation\n- city/state/country: extract or infer from image or catalog info\n- keywords: array of objects\n- each keyword object has: value, confidence (0..1), basis\n- keep value lowercase and deduplicated\n- basis must be short and concrete",
+            "Title: %s\nCatalog description: %s\nCountry: %s\nState: %s\nCity: %s\n\nReturn ONLY valid JSON with keys: title (short, title case), description (one sentence), country, state, city, keywords (array with value, confidence 0-1, basis).",
             $postcard->title,
             $postcard->description ?? '',
             $postcard->country ?? '',

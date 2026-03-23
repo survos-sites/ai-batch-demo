@@ -68,14 +68,16 @@
                                     <th>ID</th>
                                     <th>Status</th>
                                     <th>Req</th>
+                                    <th>Cost</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {% for batch in latestBatches %}
                                     <tr>
-                                        <td><a href="{{ path('tacman_ai_batch_ui_show', {id: batch.id}) }}">#{{ batch.id }}</a></td>
+                                        <td><a href="{{ path('app_batch_show', {id: batch.id}) }}">#{{ batch.id }}</a></td>
                                         <td><span class="badge text-bg-secondary">{{ batch.status }}</span></td>
                                         <td>{{ batch.requestCount }}</td>
+                                        <td>{% if batch.estimatedCostUsd %}${{ batch.estimatedCostUsd }}{% else %}-{% endif %}</td>
                                     </tr>
                                 {% else %}
                                     <tr><td colspan="3" class="text-muted">No batches yet</td></tr>

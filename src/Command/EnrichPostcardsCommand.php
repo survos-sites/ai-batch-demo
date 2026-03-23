@@ -5,6 +5,7 @@ namespace App\Command;
 
 use App\AiTask\EnrichPostcardAiTask;
 use App\Entity\Postcard;
+use App\Enum\EnrichmentStatus;
 use App\Message\EnrichPostcardMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -47,8 +48,8 @@ final class EnrichPostcardsCommand
             ->orderBy('p.id', 'ASC');
 
         if (!$force) {
-            $query->andWhere('p.enriched IS NULL OR p.enriched = :enriched')
-                ->setParameter('enriched', false);
+            $query->andWhere('p.enrichmentStatus IS NULL OR p.enrichmentStatus = :status')
+                ->setParameter('status', EnrichmentStatus::NEW);
         }
 
         /** @var list<Postcard> $postcards */
@@ -74,6 +75,15 @@ final class EnrichPostcardsCommand
             if ($io->isVerbose()) {
                 $io->writeln('Submitting requests to provider batch API...');
             }
+
+            $this->entityManager->createQueryBuilder()
+                ->update(Postcard::class, 'p')
+                ->set('p.enrichmentStatus', ':status')
+                ->setParameter('status', EnrichmentStatus::QUEUED)
+                ->where('p.id IN (:ids)')
+                ->setParameter('ids', array_column($messages, 'postcardId'))
+                ->getQuery()
+                ->execute();
 
             $batch = $this->dispatcher->dispatchBatch($messages, $this->task);
             $io->success(sprintf('Submitted batch #%d (%s) with %d postcards.', $batch->id ?? 0, $batch->providerBatchId ?? '-', count($messages)));

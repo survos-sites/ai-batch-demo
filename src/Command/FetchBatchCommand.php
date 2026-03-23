@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Entity\Postcard;
+use App\Enum\EnrichmentStatus;
 use App\Import\PostcardAiResultRow;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -33,8 +35,13 @@ final class FetchBatchCommand
         #[Argument('Batch ID (local DB ID or provider batch ID)')] ?string $batchId = null,
         #[Option('Fetch and apply results')] bool $fetch = false,
         #[Option('Poll until complete')] bool $watch = false,
+        #[Option('Watch all incomplete batches')] bool $watchAll = false,
         #[Option('Poll interval in seconds')] int $interval = 30,
     ): int {
+        if ($watchAll) {
+            return $this->watchAllBatches($io, $fetch, $interval);
+        }
+
         $batch = null;
 
         if ($batchId) {
@@ -102,6 +109,13 @@ final class FetchBatchCommand
         $resultsLines = [];
 
         foreach ($this->batchClient->fetchResults($providerJob) as $result) {
+            $existingResult = $this->entityManager->getRepository(AiBatchResult::class)
+                ->findOneBy(['aiBatchId' => $batch->id, 'customId' => $result->customId]);
+
+            if ($existingResult) {
+                continue;
+            }
+
             $resultEntity = new AiBatchResult();
             $resultEntity->aiBatchId = $batch->id;
             $resultEntity->customId = $result->customId;
@@ -132,7 +146,15 @@ final class FetchBatchCommand
                 $io->error(sprintf('  Failed: %s - %s', $result->customId, $result->error));
             }
 
-            $this->entityManager->persist($resultEntity);
+            try {
+                $this->entityManager->persist($resultEntity);
+            } catch (\Throwable $e) {
+                if (str_contains($e->getMessage(), 'duplicate key')) {
+                    $io->note(sprintf('  Skipped existing: %s', $result->customId));
+                } else {
+                    throw $e;
+                }
+            }
         }
 
         if (!empty($resultsLines)) {
@@ -153,6 +175,7 @@ final class FetchBatchCommand
             return;
         }
 
+        $content = $this->stripMarkdownCodeBlocks($content);
         $resultRow = PostcardAiResultRow::fromJson($content);
         if (!$resultRow) {
             return;
@@ -161,6 +184,7 @@ final class FetchBatchCommand
         $this->objectMapper->map($resultRow, $postcard);
 
         $postcard->enriched = true;
+        $postcard->enrichmentStatus = EnrichmentStatus::FINISHED;
         $postcard->enrichedAt = new \DateTimeImmutable();
         $postcard->updatedAt = new \DateTimeImmutable();
         $postcard->promptTokens = $promptTokens ?: null;
@@ -239,6 +263,83 @@ final class FetchBatchCommand
                 ['Created', $batch->createdAt->format('Y-m-d H:i:s')],
             ]
         );
+    }
+
+    private function watchAllBatches(SymfonyStyle $io, bool $fetch, int $interval): int
+    {
+        $io->title('Watching all incomplete batches');
+
+        while (true) {
+            $batches = $this->entityManager->getRepository(AiBatch::class)
+                ->findBy(['status' => ['submitted', 'processing']], ['createdAt' => 'DESC']);
+
+            if (empty($batches)) {
+                $io->success('All batches are complete!');
+                return Command::SUCCESS;
+            }
+
+            $io->writeln(sprintf('Watching %d incomplete batch(es)...', count($batches)));
+
+            $allComplete = true;
+            foreach ($batches as $batch) {
+                if (!in_array($batch->status, ['completed', 'failed'])) {
+                    $allComplete = false;
+                }
+
+                $io->writeln(sprintf('Checking batch #%d (%s)...', $batch->id, $batch->providerBatchId ?? 'N/A'));
+
+                $this->refreshBatch($batch);
+                $this->printStatus($io, $batch);
+
+                if ($batch->status === 'completed') {
+                    if ($fetch) {
+                        $this->fetchAndApplyResults($io, $batch);
+                    } else {
+                        $io->writeln(sprintf('  Batch #%d complete! Use --fetch to apply results.', $batch->id));
+                    }
+                }
+            }
+
+            if ($allComplete) {
+                $io->success('All batches are complete!');
+                return Command::SUCCESS;
+            }
+
+            $io->writeln(sprintf('Waiting %d seconds...', $interval));
+            sleep($interval);
+        }
+    }
+
+    private function refreshBatch(AiBatch $batch): void
+    {
+        if (!$batch->providerBatchId) {
+            return;
+        }
+
+        try {
+            $providerJob = $this->batchClient->checkBatch($batch->providerBatchId);
+            $batch->applyProviderStatus(
+                $providerJob->status ?? 'in_progress',
+                $providerJob->completedCount ?? 0,
+                $providerJob->failedCount ?? 0,
+                $providerJob->outputFileId ?? null,
+                $providerJob->errorFileId ?? null,
+            );
+            $this->entityManager->flush();
+        } catch (\Throwable $e) {
+            // Silently fail for individual batch refresh
+        }
+    }
+
+    private function stripMarkdownCodeBlocks(string $content): string
+    {
+        if (preg_match('/```json\s*(.*?)\s*```/s', $content, $matches)) {
+            return trim($matches[1]);
+        }
+        if (preg_match('/```\s*(.*?)\s*```/s', $content, $matches)) {
+            return trim($matches[1]);
+        }
+        return $content;
     }
 
     private function timeAgo(\DateTimeInterface $date): string

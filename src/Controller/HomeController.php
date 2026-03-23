@@ -6,10 +6,14 @@ namespace App\Controller;
 use App\Entity\Postcard;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Import\PostcardAiResultRow;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\ObjectMapper\SymfonyObjectMapperInterface as SymfonySymfonyObjectMapperInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Tacman\AiBatch\Entity\AiBatch;
 use Tacman\AiBatch\Entity\AiBatchResult;
+use Tacman\AiBatch\Service\SymfonyBatchPlatformClient;
 
 final class HomeController extends AbstractController
 {
@@ -39,11 +43,26 @@ final class HomeController extends AbstractController
     }
 
     #[Route('/batch/{id}', name: 'app_batch_show', methods: ['GET'])]
-    public function batch(int $id, EntityManagerInterface $entityManager): Response
+    public function batch(int $id, EntityManagerInterface $entityManager, SymfonyBatchPlatformClient $batchClient): Response
     {
         $batch = $entityManager->getRepository(AiBatch::class)->find($id);
         if (!$batch instanceof AiBatch) {
             throw $this->createNotFoundException(sprintf('Batch %d not found.', $id));
+        }
+
+        if ($batch->providerBatchId) {
+            try {
+                $providerJob = $batchClient->checkBatch($batch->providerBatchId);
+                $batch->applyProviderStatus(
+                    $providerJob->status ?? 'in_progress',
+                    $providerJob->completedCount ?? 0,
+                    $providerJob->failedCount ?? 0,
+                    $providerJob->outputFileId,
+                    $providerJob->errorFileId,
+                );
+                $entityManager->flush();
+            } catch (\Exception $e) {
+            }
         }
 
         $results = $entityManager->getRepository(AiBatchResult::class)->findBy(['aiBatchId' => $id], ['id' => 'ASC']);
@@ -52,6 +71,105 @@ final class HomeController extends AbstractController
             'batch' => $batch,
             'results' => $results,
         ]);
+    }
+
+    #[Route('/batch/{id}/apply', name: 'app_batch_apply', methods: ['POST'])]
+    public function applyBatch(int $id, EntityManagerInterface $entityManager, SymfonyBatchPlatformClient $batchClient, SymfonyObjectMapperInterface $objectMapper): RedirectResponse
+    {
+        $batch = $entityManager->getRepository(AiBatch::class)->find($id);
+        if (!$batch instanceof AiBatch) {
+            throw $this->createNotFoundException(sprintf('Batch %d not found.', $id));
+        }
+
+        if (!$batch->providerBatchId) {
+            $this->addFlash('error', 'Batch has no provider ID.');
+            return $this->redirectToRoute('app_batch_show', ['id' => $id]);
+        }
+
+        try {
+            $providerJob = $batchClient->checkBatch($batch->providerBatchId);
+            $count = 0;
+
+            foreach ($batchClient->fetchResults($providerJob) as $result) {
+                $existingResult = $entityManager->getRepository(\Tacman\AiBatch\Entity\AiBatchResult::class)
+                    ->findOneBy(['aiBatchId' => $batch->id, 'customId' => $result->customId]);
+
+                if ($existingResult) {
+                    continue;
+                }
+
+                $resultEntity = new \Tacman\AiBatch\Entity\AiBatchResult();
+                $resultEntity->aiBatchId = $batch->id;
+                $resultEntity->customId = $result->customId;
+                $resultEntity->success = $result->success;
+                $resultEntity->content = $result->content;
+                $resultEntity->promptTokens = $result->promptTokens;
+                $resultEntity->outputTokens = $result->outputTokens;
+                $resultEntity->createdAt = new \DateTimeImmutable();
+
+                if ($result->success) {
+                    $postcard = $entityManager->find(Postcard::class, $result->customId);
+                    if ($postcard) {
+                        $this->applyResultToPostcard($postcard, $result->content, $result->promptTokens, $result->outputTokens, $objectMapper);
+                        $count++;
+                    }
+                }
+
+                try {
+                    $entityManager->persist($resultEntity);
+                } catch (\Throwable $e) {
+                    if (!str_contains($e->getMessage(), 'duplicate key')) {
+                        throw $e;
+                    }
+                }
+            }
+
+            $batch->appliedCount += $count;
+            $entityManager->flush();
+            $this->addFlash('success', sprintf('Applied %d results.', $count));
+        } catch (\Exception $e) {
+            $this->addFlash('error', sprintf('Error: %s', $e->getMessage()));
+        }
+
+        return $this->redirectToRoute('app_batch_show', ['id' => $id]);
+    }
+
+    private function applyResultToPostcard(Postcard $postcard, ?string $content, int $promptTokens = 0, int $outputTokens = 0, SymfonyObjectMapperInterface $objectMapper): void
+    {
+        if (!$content) {
+            return;
+        }
+
+        $content = $this->stripMarkdownCodeBlocks($content);
+        $resultRow = PostcardAiResultRow::fromJson($content);
+        if (!$resultRow) {
+            return;
+        }
+
+        $objectMapper->map($resultRow, $postcard);
+
+        $postcard->enriched = true;
+        $postcard->enrichmentStatus = \App\Enum\EnrichmentStatus::FINISHED;
+        $postcard->enrichedAt = new \DateTimeImmutable();
+        $postcard->updatedAt = new \DateTimeImmutable();
+        $postcard->promptTokens = $promptTokens ?: null;
+        $postcard->outputTokens = $outputTokens ?: null;
+
+        if (!empty($resultRow->keywords)) {
+            $postcard->syncKeywordDetails($resultRow->keywords);
+        }
+    }
+
+    private function stripMarkdownCodeBlocks(string $content): string
+    {
+        if (preg_match('/```json\s*(.*?)\s*```/s', $content, $matches)) {
+            return trim($matches[1]);
+        }
+        if (preg_match('/```\s*(.*?)\s*```/s', $content, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return trim($content);
     }
 
     #[Route('/postcard/{id}', name: 'app_postcard_show', methods: ['GET'])]

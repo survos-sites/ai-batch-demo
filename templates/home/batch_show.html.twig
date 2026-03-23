@@ -6,6 +6,11 @@
     <div class="container py-4">
         <div class="mb-3">
             <a href="{{ path('app_home') }}" class="btn btn-outline-secondary btn-sm">Back</a>
+            {% if batch.status == 'completed' and batch.appliedCount < batch.requestCount %}
+                <form action="{{ path('app_batch_apply', {id: batch.id}) }}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-primary btn-sm">Apply Results</button>
+                </form>
+            {% endif %}
         </div>
 
         <div class="card border-0 shadow-sm mb-4">
@@ -18,6 +23,11 @@
                     <div class="col-md-2"><div class="small text-muted">Requests</div><div>{{ batch.requestCount }}</div></div>
                     <div class="col-md-2"><div class="small text-muted">Applied</div><div>{{ batch.appliedCount }}</div></div>
                 </div>
+                {% if batch.estimatedCostUsd %}
+                <div class="row g-3 mt-2">
+                    <div class="col-md-3"><div class="small text-muted">Est. Cost</div><div>${{ batch.estimatedCostUsd }}</div></div>
+                </div>
+                {% endif %}
             </div>
         </div>
 

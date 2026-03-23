@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7492614265d99deba601338632ed558d",
+    "content-hash": "62531200a1de7c3d06dd143092b51f01",
     "packages": [
         {
             "name": "composer/semver",
@@ -8423,17 +8423,11 @@
         },
         {
             "name": "tacman/ai-batch-bundle",
-            "version": "0.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/tacman/ai-batch-bundle.git",
-                "reference": "9ae8168c200fc96805755a5838fc1d9e30869128"
-            },
+            "version": "dev-main",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/tacman/ai-batch-bundle/zipball/9ae8168c200fc96805755a5838fc1d9e30869128",
-                "reference": "9ae8168c200fc96805755a5838fc1d9e30869128",
-                "shasum": ""
+                "type": "path",
+                "url": "/home/tac/tacman/ai-batch-bundle",
+                "reference": "9ae8168c200fc96805755a5838fc1d9e30869128"
             },
             "require": {
                 "doctrine/doctrine-bundle": "^2.13|^3.0",
@@ -8466,7 +8460,6 @@
                     "Tacman\\AiBatch\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -8485,11 +8478,9 @@
                 "openai",
                 "symfony"
             ],
-            "support": {
-                "issues": "https://github.com/tacman/ai-batch-bundle/issues",
-                "source": "https://github.com/tacman/ai-batch-bundle/tree/0.3"
-            },
-            "time": "2026-03-23T15:35:09+00:00"
+            "transport-options": {
+                "relative": false
+            }
         },
         {
             "name": "twig/extra-bundle",
