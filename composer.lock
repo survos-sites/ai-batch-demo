@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "38414620428c084d3afe9cc6d7490930",
+    "content-hash": "ddfcb1a3d163d2a77c3f4beb5edfb09e",
     "packages": [
         {
             "name": "composer/semver",
@@ -8423,11 +8423,17 @@
         },
         {
             "name": "tacman/ai-batch-bundle",
-            "version": "dev-main",
-            "dist": {
-                "type": "path",
-                "url": "../../tacman/ai-batch-bundle",
+            "version": "0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/tacman/ai-batch-bundle.git",
                 "reference": "282dcbda9c9fd00d772235bbda431374541d9367"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/tacman/ai-batch-bundle/zipball/282dcbda9c9fd00d772235bbda431374541d9367",
+                "reference": "282dcbda9c9fd00d772235bbda431374541d9367",
+                "shasum": ""
             },
             "require": {
                 "doctrine/doctrine-bundle": "^2.13|^3.0",
@@ -8460,6 +8466,7 @@
                     "Tacman\\AiBatch\\": "src/"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -8478,10 +8485,11 @@
                 "openai",
                 "symfony"
             ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/tacman/ai-batch-bundle/issues",
+                "source": "https://github.com/tacman/ai-batch-bundle/tree/0.2"
+            },
+            "time": "2026-03-23T03:14:55+00:00"
         },
         {
             "name": "twig/extra-bundle",
@@ -11042,8 +11050,7 @@
     ],
     "minimum-stability": "dev",
     "stability-flags": {
-        "symfony/ai": 20,
-        "tacman/ai-batch-bundle": 20
+        "symfony/ai": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

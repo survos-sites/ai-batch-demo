@@ -4,9 +4,12 @@
 
 {% block body %}
     <div class="container py-4">
-        <div class="mb-3 d-flex gap-2">
+        <div class="mb-3 d-flex gap-2 flex-wrap">
             <a href="{{ path('app_home') }}" class="btn btn-outline-secondary btn-sm">Back to home</a>
             <a href="{{ path('tacman_ai_batch_ui_index') }}" class="btn btn-outline-secondary btn-sm">Batch UI</a>
+            {% if postcard.rawData.citation_url %}
+                <a href="{{ postcard.rawData.citation_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">View on Digital Commonwealth</a>
+            {% endif %}
         </div>
 
         <div class="card border-0 shadow-sm mb-4">
@@ -47,28 +50,34 @@
                             <tr>
                                 <th>Title</th>
                                 <td>{{ postcard.title ?: '-' }}</td>
-                                <td>{{ postcard.title ?: '-' }}</td>
+                                <td>{{ postcard.aiTitle ?: '-' }}</td>
                             </tr>
                             <tr>
                                 <th>Catalog Description</th>
                                 <td>{{ postcard.description ?: '-' }}</td>
-                                <td>{{ postcard.description ?: '-' }}</td>
+                                <td>{{ postcard.aiDescription ?: '-' }}</td>
                             </tr>
+                            {% if postcard.country or postcard.aiCountry %}
                             <tr>
                                 <th>Country</th>
                                 <td>{{ postcard.country ?: '-' }}</td>
-                                <td>{{ postcard.country ?: '-' }} <em class="text-muted">Accepted from source</em></td>
+                                <td>{{ postcard.aiCountry ?: '-' }}</td>
                             </tr>
+                            {% endif %}
+                            {% if postcard.state or postcard.aiState %}
                             <tr>
                                 <th>State</th>
                                 <td>{{ postcard.state ?: '-' }}</td>
-                                <td>{{ postcard.state ?: '-' }} <em class="text-muted">Accepted from source</em></td>
+                                <td>{{ postcard.aiState ?: '-' }}</td>
                             </tr>
+                            {% endif %}
+                            {% if postcard.city or postcard.aiCity %}
                             <tr>
                                 <th>City</th>
                                 <td>{{ postcard.city ?: '-' }}</td>
-                                <td>{{ postcard.city ?: '-' }} <em class="text-muted">Accepted from source</em></td>
+                                <td>{{ postcard.aiCity ?: '-' }}</td>
                             </tr>
+                            {% endif %}
                             </tbody>
                         </table>
                     </div>
@@ -84,39 +93,55 @@
                         <h3 class="h6">New AI Fields</h3>
                         <table class="table table-sm align-middle mb-0">
                             <tbody>
+                            {% if postcard.aiTitle %}
+                            <tr>
+                                <th class="w-25">AI Title</th>
+                                <td>{{ postcard.aiTitle }}</td>
+                            </tr>
+                            {% endif %}
                             <tr>
                                 <th class="w-25">AI Description</th>
                                 <td>{{ postcard.aiDescription ?: '-' }}</td>
                             </tr>
+                            {% if postcard.aiCountry or postcard.aiState or postcard.aiCity %}
+                            <tr>
+                                <th>AI Location</th>
+                                <td>
+                                    {% set locationParts = [] %}
+                                    {% if postcard.aiCity %}{% set locationParts = locationParts|merge([postcard.aiCity]) %}{% endif %}
+                                    {% if postcard.aiState %}{% set locationParts = locationParts|merge([postcard.aiState]) %}{% endif %}
+                                    {% if postcard.aiCountry %}{% set locationParts = locationParts|merge([postcard.aiCountry]) %}{% endif %}
+                                    {{ locationParts|join(', ') }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% if keywordDetails is not empty %}
                             <tr>
                                 <th>AI Keywords</th>
                                 <td>
-                                    {% if keywordDetails is empty %}
-                                        <span class="text-muted">none</span>
-                                    {% else %}
-                                        <div class="table-responsive">
-                                            <table class="table table-sm mb-0">
-                                                <thead>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                            <tr>
+                                                <th>Keyword</th>
+                                                <th>Confidence</th>
+                                                <th>Basis</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for keyword in keywordDetails %}
                                                 <tr>
-                                                    <th>Keyword</th>
-                                                    <th>Confidence</th>
-                                                    <th>Basis</th>
+                                                    <td><span class="badge text-bg-light">{{ keyword.value }}</span></td>
+                                                    <td>{{ keyword.confidence is null ? '-' : (keyword.confidence * 100)|number_format(0) ~ '%' }}</td>
+                                                    <td class="small text-muted">{{ keyword.basis ?: '-' }}</td>
                                                 </tr>
-                                                </thead>
-                                                <tbody>
-                                                {% for keyword in keywordDetails %}
-                                                    <tr>
-                                                        <td><span class="badge text-bg-light">{{ keyword.value }}</span></td>
-                                                        <td>{{ keyword.confidence is null ? '-' : (keyword.confidence * 100)|number_format(0) ~ '%' }}</td>
-                                                        <td class="small text-muted">{{ keyword.basis ?: '-' }}</td>
-                                                    </tr>
-                                                {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    {% endif %}
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </td>
                             </tr>
+                            {% endif %}
                             <tr>
                                 <th>Enriched At</th>
                                 <td>{{ postcard.enrichedAt ? postcard.enrichedAt|date('Y-m-d H:i:s') : '-' }}</td>
@@ -128,8 +153,8 @@
                     <div class="col-lg-6">
                         <h3 class="h6">Model + Prompt + Tokens</h3>
                         <div class="small mb-2"><strong>Model:</strong> {{ modelName }}</div>
-                        <div class="small mb-2"><strong>Prompt tokens:</strong> {{ latestBatchResult ? latestBatchResult.promptTokens : '-' }}</div>
-                        <div class="small mb-3"><strong>Output tokens:</strong> {{ latestBatchResult ? latestBatchResult.outputTokens : '-' }}</div>
+                        <div class="small mb-2"><strong>Prompt tokens:</strong> {{ postcard.promptTokens ?: '-' }}</div>
+                        <div class="small mb-3"><strong>Output tokens:</strong> {{ postcard.outputTokens ?: '-' }}</div>
                         <pre class="small bg-light p-2 rounded mb-0" style="max-height: 260px; overflow: auto;">{{ promptPreview }}</pre>
                     </div>
                 </div>
@@ -159,7 +184,11 @@
                             model: modelName,
                             prompt_tokens: latestBatchResult ? latestBatchResult.promptTokens : null,
                             output_tokens: latestBatchResult ? latestBatchResult.outputTokens : null,
+                            title: postcard.aiTitle,
                             description: postcard.aiDescription,
+                            country: postcard.aiCountry,
+                            state: postcard.aiState,
+                            city: postcard.aiCity,
                             keywords: keywordDetails,
                             enriched_at: postcard.enrichedAt ? postcard.enrichedAt|date('c') : null
                         }|json_encode|e('html_attr') }}'

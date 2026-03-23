@@ -47,8 +47,8 @@ final class EnrichPostcardsCommand
             ->orderBy('p.id', 'ASC');
 
         if (!$force) {
-            $query->andWhere('p.aiDescription IS NULL OR p.aiDescription = :empty')
-                ->setParameter('empty', '');
+            $query->andWhere('p.enriched IS NULL OR p.enriched = :enriched')
+                ->setParameter('enriched', false);
         }
 
         /** @var list<Postcard> $postcards */

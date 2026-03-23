@@ -46,11 +46,17 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
         }
 
         $postcard = $this->requirePostcard($message->postcardId);
-        $output = $this->invokeStructuredOutput($postcard);
+        $output = $this->invokeStructuredOutput($postcard, $postcard);
 
+        $postcard->aiTitle = $output->title;
         $postcard->aiDescription = $output->description;
+        $postcard->aiCountry = $output->country;
+        $postcard->aiState = $output->state;
+        $postcard->aiCity = $output->city;
         $postcard->syncKeywordDetails($this->normalizeKeywordDetails($output->keywords));
+        $postcard->enriched = true;
         $postcard->enrichedAt = new \DateTimeImmutable();
+        $postcard->updatedAt = new \DateTimeImmutable();
         $this->entityManager->flush();
 
         return $output;
@@ -92,13 +98,23 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
         }
 
         if (is_array($content)) {
+            $output->title = is_string($content['title'] ?? null) ? $content['title'] : null;
             $output->description = is_string($content['description'] ?? null) ? $content['description'] : null;
+            $output->country = is_string($content['country'] ?? null) ? $content['country'] : null;
+            $output->state = is_string($content['state'] ?? null) ? $content['state'] : null;
+            $output->city = is_string($content['city'] ?? null) ? $content['city'] : null;
             $output->keywords = is_array($content['keywords'] ?? null) ? $content['keywords'] : [];
         }
 
+        $postcard->aiTitle = $output->title;
         $postcard->aiDescription = $output->description;
+        $postcard->aiCountry = $output->country;
+        $postcard->aiState = $output->state;
+        $postcard->aiCity = $output->city;
         $postcard->syncKeywordDetails($this->normalizeKeywordDetails($output->keywords));
+        $postcard->enriched = true;
         $postcard->enrichedAt = new \DateTimeImmutable();
+        $postcard->updatedAt = new \DateTimeImmutable();
         $this->entityManager->flush();
     }
 
@@ -125,6 +141,17 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
         ]);
 
         $mapped = $result->asObject();
+        
+        $metadata = $result->getMetadata();
+        $allMetadata = is_object($metadata) && method_exists($metadata, 'all') ? $metadata->all() : [];
+        if (isset($allMetadata['token_usage'])) {
+            $tokenUsage = $allMetadata['token_usage'];
+            if ($tokenUsage instanceof \Symfony\AI\Platform\TokenUsage\TokenUsageInterface) {
+                $postcard->promptTokens = $tokenUsage->getPromptTokens();
+                $postcard->outputTokens = $tokenUsage->getCompletionTokens();
+            }
+        }
+
         if ($mapped instanceof PostcardEnrichmentOutput) {
             return $mapped;
         }
@@ -134,13 +161,13 @@ final class EnrichPostcardAiTask implements BatchableAiTaskHandlerInterface
 
     private function systemPrompt(): string
     {
-        return 'You enrich vintage postcard records. Return a concise visual description and 5-12 lowercase keyword objects. Each keyword must include value, confidence (0..1), and basis (short reason from visible or provided evidence).';
+        return 'You enrich vintage postcard records. Return a concise visual description, location (city, state, country), and 5-12 lowercase keyword objects. Each keyword must include value, confidence (0..1), and basis (short reason from visible or provided evidence).';
     }
 
     private function userPrompt(Postcard $postcard): string
     {
         return trim(sprintf(
-            "Title: %s\nCatalog description: %s\nCountry: %s\nState: %s\nCity: %s\n\nRules:\n- description: one sentence, factual, no speculation\n- keywords: array of objects\n- each keyword object has: value, confidence (0..1), basis\n- keep value lowercase and deduplicated\n- basis must be short and concrete",
+            "Title: %s\nCatalog description: %s\nCountry: %s\nState: %s\nCity: %s\n\nRules:\n- title: short descriptive title for the image\n- description: one sentence, factual, no speculation\n- city/state/country: extract or infer from image or catalog info\n- keywords: array of objects\n- each keyword object has: value, confidence (0..1), basis\n- keep value lowercase and deduplicated\n- basis must be short and concrete",
             $postcard->title,
             $postcard->description ?? '',
             $postcard->country ?? '',

@@ -23,8 +23,9 @@ final class PostcardSearch extends AbstractSearch
                 },
             ])
             ->addFacet('keywords.value', 'Keywords')
-            ->addFacet('o.country', 'Country')
-            ->addFacet('o.city', 'City')
+            ->addFacet('o.aiCountry', 'Country')
+            ->addFacet('o.aiState', 'State')
+            ->addFacet('o.aiCity', 'City')
             ->addAvailableSort('o.enrichedAt:desc', 'Recently enriched')
             ->addAvailableSort('o.title:asc', 'Title A-Z')
             ->setAvailableHitsPerPage([12, 24, 48]);

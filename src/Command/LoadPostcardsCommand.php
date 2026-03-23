@@ -30,6 +30,8 @@ final class LoadPostcardsCommand
         ?int $limit = null,
         #[Option('Delete existing postcards first')]
         bool $reset = false,
+        #[Option('Only import ID and image (skip metadata, for reloading after AI processing)')]
+        bool $imageOnly = false,
     ): int {
         if (!is_file($path)) {
             $io->error(sprintf('File not found: %s', $path));
@@ -65,7 +67,11 @@ final class LoadPostcardsCommand
                 ++$updated;
             }
 
-            $this->objectMapper->map(PostcardImportRow::fromArray($row), $postcard);
+            if ($imageOnly) {
+                $postcard->thumbnailUrl = (string) ($row['thumbnail_url'] ?? '');
+            } else {
+                $this->objectMapper->map(PostcardImportRow::fromArray($row), $postcard);
+            }
             $postcard->rawData = $row;
 
             ++$processed;

@@ -29,7 +29,7 @@ final class HomeController extends AbstractController
             'batchResultCount' => $batchResultRepository->count([]),
             'latestBatches' => $batchRepository->findBy([], ['createdAt' => 'DESC'], 10),
             'latestBatchResults' => $batchResultRepository->findBy([], ['createdAt' => 'DESC'], 10),
-            'latestPostcards' => $postcardRepository->findBy([], ['enrichedAt' => 'DESC'], 8),
+            'latestPostcards' => $postcardRepository->findBy([], ['updatedAt' => 'DESC'], 8),
         ]);
     }
 
@@ -77,10 +77,15 @@ final class HomeController extends AbstractController
         ));
 
         $finalRecord = array_merge($postcard->rawData, [
+            'ai_title' => $postcard->aiTitle,
             'ai_description' => $postcard->aiDescription,
+            'ai_country' => $postcard->aiCountry,
+            'ai_state' => $postcard->aiState,
+            'ai_city' => $postcard->aiCity,
             'ai_keywords' => $postcard->aiKeywords,
             'ai_keyword_details' => $keywordDetails,
             'enriched_at' => $postcard->enrichedAt?->format(DATE_ATOM),
+            'updated_at' => $postcard->updatedAt?->format(DATE_ATOM),
         ]);
 
         return $this->render('home/postcard_show.html.twig', [

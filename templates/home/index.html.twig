@@ -28,7 +28,7 @@
         </div>
 
         <div class="row g-4">
-            <div class="col-12 col-xl-8">
+            <div class="col-12">
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
                         <h2 class="h5 mb-3">Search Postcards</h2>
@@ -37,7 +37,7 @@
                 </div>
             </div>
 
-            <div class="col-12 col-xl-4">
+            <div class="col-12 col-xl-4 order-xl-first">
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body p-4">
                         <h2 class="h6 mb-3">Recent Batches</h2>
@@ -91,12 +91,20 @@
 
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-4">
-                        <h2 class="h6 mb-3">Latest Enriched Postcards</h2>
+                        <h2 class="h6 mb-3">Recent changes</h2>
                         <ul class="list-group list-group-flush">
                             {% for postcard in latestPostcards %}
                                 <li class="list-group-item px-0">
-                                    <div class="fw-semibold"><a href="{{ path('app_postcard_show', {id: postcard.id}) }}">{{ postcard.title }}</a></div>
-                                    <div class="small text-muted">{{ postcard.id }}</div>
+                                    <div class="fw-semibold">
+                                        <a href="{{ path('app_postcard_show', {id: postcard.id}) }}">
+                                            {{ postcard.aiTitle ?: postcard.title ?: postcard.id|split(':')|last }}
+                                        </a>
+                                    </div>
+                                    {% if postcard.aiDescription %}
+                                        <div class="small text-muted text-truncate">{{ postcard.aiDescription }}</div>
+                                    {% elseif not postcard.aiTitle and not postcard.title %}
+                                        <div class="small text-muted">{{ postcard.id }}</div>
+                                    {% endif %}
                                 </li>
                             {% else %}
                                 <li class="list-group-item px-0 text-muted">No postcards yet</li>

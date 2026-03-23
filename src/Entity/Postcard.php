@@ -24,15 +24,15 @@ class Postcard
     public ?string $description = null;
 
     #[Map(source: 'thumbnail_url')]
-    #[ORM\Column(length: 1024, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     public ?string $thumbnailUrl = null;
 
     #[Map(source: 'iiif_manifest')]
-    #[ORM\Column(length: 1024, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     public ?string $iiifManifest = null;
 
     #[Map(source: 'iiif_base')]
-    #[ORM\Column(length: 1024, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     public ?string $iiifBase = null;
 
     #[ORM\Column(length: 128, nullable: true)]
@@ -75,6 +75,18 @@ class Postcard
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     public ?\DateTimeImmutable $enrichedAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    public ?\DateTimeImmutable $updatedAt = null;
+
+    #[ORM\Column(nullable: true)]
+    public ?bool $enriched = null;
+
+    #[ORM\Column(nullable: true)]
+    public ?int $promptTokens = null;
+
+    #[ORM\Column(nullable: true)]
+    public ?int $outputTokens = null;
 
     /** @var Collection<int, PostcardKeyword> */
     #[ORM\OneToMany(mappedBy: 'postcard', targetEntity: PostcardKeyword::class, cascade: ['persist', 'remove'], orphanRemoval: true)]

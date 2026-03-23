@@ -1,16 +1,11 @@
 {
     "type": "project",
-    "license": "proprietary",
+    "license": "MIT",
+    "name": "survos-sites/ai-batch-demo",
+    "description": "Postcard demo using batches",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "repositories": [
-        {
-            "type": "path",
-            "url": "../../tacman/ai-batch-bundle",
-            "options": {
-                "symlink": true
-            }
-        },
         {
             "type": "vcs",
             "url": "https://github.com/camilleislasse/ai",
@@ -61,7 +56,7 @@
         "symfony/validator": "^8.1",
         "symfony/web-link": "^8.1",
         "symfony/yaml": "^8.1",
-        "tacman/ai-batch-bundle": "@dev",
+        "tacman/ai-batch-bundle": "^0.2",
         "twig/extra-bundle": "^2.12|^3.24",
         "twig/twig": "^2.12|^3.24"
     },

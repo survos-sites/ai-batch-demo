@@ -10,16 +10,31 @@
                                 <img src="{{ postcard.thumbnailUrl }}" class="card-img-top" alt="{{ postcard.title }}" loading="lazy">
                             {% endif %}
                             <div class="card-body">
-                                <h3 class="h6 card-title mb-2">{{ postcard.title }}</h3>
+                                <h3 class="h6 card-title mb-2">{{ postcard.aiTitle ?: postcard.title }}</h3>
                                 <div class="small text-muted mb-2">{{ postcard.id }}</div>
                                 <p class="small mb-2">{{ postcard.aiDescription ?: postcard.description ?: 'No description yet.' }}</p>
-                                <div class="d-flex flex-wrap gap-1">
-                                    {% for keyword in postcard.aiKeywords|default([])|slice(0, 6) %}
-                                        <span class="badge text-bg-light">{{ keyword }}</span>
-                                    {% endfor %}
-                                </div>
+                                {% if postcard.keywords|default([])|length > 0 %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for keyword in postcard.keywords %}
+                                            {% set conf = keyword.confidence ?? 0 %}
+                                            {% set confPct = (conf * 100)|round %}
+                                            {% set color = confPct >= 80 ? 'success' : (confPct >= 50 ? 'warning' : 'secondary') %}
+                                            {% set fs = confPct >= 80 ? '1.1em' : (confPct >= 50 ? '1em' : '0.9em') %}
+                                            <span class="badge text-bg-{{ color }}" style="font-size: {{ fs }}" title="Confidence: {{ confPct }}%{% if keyword.basis %}; Basis: {{ keyword.basis }}{% endif %}">{{ keyword.value }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% elseif postcard.aiKeywords|default([])|length > 0 %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for keyword in postcard.aiKeywords|default([])|slice(0, 6) %}
+                                            <span class="badge text-bg-light">{{ keyword }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                                 <div class="mt-3">
                                     <a class="btn btn-sm btn-outline-primary" href="{{ path('app_postcard_show', {id: postcard.id}) }}">Open record</a>
+                                    {% if postcard.rawData.citation_url %}
+                                        <a href="{{ postcard.rawData.citation_url }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="View original catalog entry">Original site</a>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
