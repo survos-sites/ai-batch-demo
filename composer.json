@@ -7,10 +7,6 @@
     "prefer-stable": true,
     "repositories": [
         {
-            "type": "path",
-            "url": "/home/tac/tacman/ai-batch-bundle"
-        },
-        {
             "type": "vcs",
             "url": "https://github.com/camilleislasse/ai",
             "branch": "feature/batch-processing"
@@ -23,7 +19,7 @@
         "doctrine/doctrine-bundle": "^3.2.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6.2",
-        "mezcalito/ux-search": "*",
+        "mezcalito/ux-search": "^0.5.4",
         "oskarstark/enum-helper": "^1.8.4",
         "phpdocumentor/reflection-docblock": "^5.4|^6.0.3",
         "phpstan/phpdoc-parser": "^2.3.2",
@@ -60,9 +56,9 @@
         "symfony/validator": "^8.1",
         "symfony/web-link": "^8.1",
         "symfony/yaml": "^8.1",
-        "tacman/ai-batch-bundle": "@dev",
-        "twig/extra-bundle": "^2.12|^3.24",
-        "twig/twig": "^2.12|^3.24"
+        "tacman/ai-batch-bundle": "^0.3",
+        "twig/extra-bundle": "^3.24",
+        "twig/twig": "^3.24"
     },
     "config": {
         "allow-plugins": {
