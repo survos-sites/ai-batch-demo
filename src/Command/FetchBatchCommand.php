@@ -109,6 +109,11 @@ final class FetchBatchCommand
         $resultsLines = [];
 
         foreach ($this->batchClient->fetchResults($providerJob) as $result) {
+            $io->writeln(sprintf('  Result: %s -> %s', $result->customId, $result->success ? 'ok' : 'error'));
+            if ($result->success && $io->isVeryVerbose()) {
+                $io->writeln(sprintf('    Content: %s', substr($result->content ?? '', 0, 100)));
+            }
+
             $existingResult = $this->entityManager->getRepository(AiBatchResult::class)
                 ->findOneBy(['aiBatchId' => $batch->id, 'customId' => $result->customId]);
 
@@ -181,7 +186,11 @@ final class FetchBatchCommand
             return;
         }
 
-        $this->objectMapper->map($resultRow, $postcard);
+        $postcard->aiTitle = $resultRow->title;
+        $postcard->aiDescription = $resultRow->description;
+        $postcard->aiCountry = $resultRow->country;
+        $postcard->aiState = $resultRow->state;
+        $postcard->aiCity = $resultRow->city;
 
         $postcard->enriched = true;
         $postcard->enrichmentStatus = EnrichmentStatus::FINISHED;
@@ -191,7 +200,23 @@ final class FetchBatchCommand
         $postcard->outputTokens = $outputTokens ?: null;
 
         if (!empty($resultRow->keywords)) {
-            $postcard->syncKeywordDetails($resultRow->keywords);
+            $normalized = [];
+            foreach ($resultRow->keywords as $kw) {
+                if (!is_array($kw)) {
+                    continue;
+                }
+                $value = $kw['value'] ?? null;
+                if (!is_string($value) || '' === $value) {
+                    continue;
+                }
+                $normalized[strtolower($value)] = [
+                    'confidence' => isset($kw['confidence']) && is_numeric($kw['confidence']) ? (float) $kw['confidence'] : null,
+                    'basis' => isset($kw['basis']) && is_string($kw['basis']) ? $kw['basis'] : null,
+                ];
+            }
+            if (!empty($normalized)) {
+                $postcard->syncKeywordDetails($normalized);
+            }
         }
     }
 

@@ -146,7 +146,11 @@ final class HomeController extends AbstractController
             return;
         }
 
-        $objectMapper->map($resultRow, $postcard);
+        $postcard->aiTitle = $resultRow->title;
+        $postcard->aiDescription = $resultRow->description;
+        $postcard->aiCountry = $resultRow->country;
+        $postcard->aiState = $resultRow->state;
+        $postcard->aiCity = $resultRow->city;
 
         $postcard->enriched = true;
         $postcard->enrichmentStatus = \App\Enum\EnrichmentStatus::FINISHED;
@@ -156,7 +160,23 @@ final class HomeController extends AbstractController
         $postcard->outputTokens = $outputTokens ?: null;
 
         if (!empty($resultRow->keywords)) {
-            $postcard->syncKeywordDetails($resultRow->keywords);
+            $normalized = [];
+            foreach ($resultRow->keywords as $kw) {
+                if (!is_array($kw)) {
+                    continue;
+                }
+                $value = $kw['value'] ?? null;
+                if (!is_string($value) || '' === $value) {
+                    continue;
+                }
+                $normalized[strtolower($value)] = [
+                    'confidence' => isset($kw['confidence']) && is_numeric($kw['confidence']) ? (float) $kw['confidence'] : null,
+                    'basis' => isset($kw['basis']) && is_string($kw['basis']) ? $kw['basis'] : null,
+                ];
+            }
+            if (!empty($normalized)) {
+                $postcard->syncKeywordDetails($normalized);
+            }
         }
     }
 
