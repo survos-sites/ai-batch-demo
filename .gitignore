@@ -20,3 +20,5 @@
 ###< symfony/asset-mapper ###
 
 .castor.stub.php
+config.bat
+node_modules
