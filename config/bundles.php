@@ -17,6 +17,9 @@ return [
     Tacman\AiBatch\TacmanAiBatchBundle::class => ['all' => true],
     Symfony\UX\TwigComponent\TwigComponentBundle::class => ['all' => true],
     Symfony\UX\LiveComponent\LiveComponentBundle::class => ['all' => true],
-    Mezcalito\UxSearchBundle\MezcalitoUxSearchBundle::class => ['all' => true],
     Survos\DeploymentBundle\SurvosDeploymentBundle::class => ['dev' => true, 'test' => true],
+    Survos\AtlasBundle\SurvosAtlasBundle::class => ['all' => true],
+    Survos\Kit\SurvosKitBundle::class => ['all' => true],
+    Survos\FieldBundle\SurvosFieldBundle::class => ['all' => true],
+    Survos\SearchBundle\SurvosSearchBundle::class => ['all' => true],
 ];

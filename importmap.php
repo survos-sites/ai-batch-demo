@@ -30,20 +30,20 @@ return [
     '@symfony/stimulus-bundle' => [
         'path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js',
     ],
-    '@mezcalito/ux-search' => [
-        'path' => './vendor/mezcalito/ux-search/assets/dist/controller.js',
+    '@tacman/ux-search' => [
+        'path' => './vendor/tacman/ux-search/assets/dist/controller.js',
     ],
-    '@mezcalito/ux-search/dist/controller.js' => [
-        'path' => './vendor/mezcalito/ux-search/assets/dist/controller.js',
+    '@tacman/ux-search/dist/controller.js' => [
+        'path' => './vendor/tacman/ux-search/assets/dist/controller.js',
     ],
-    '@mezcalito/ux-search/dist/controllers/refinement-list_controller.js' => [
-        'path' => './vendor/mezcalito/ux-search/assets/dist/controllers/refinement-list_controller.js',
+    '@tacman/ux-search/dist/controllers/refinement-list_controller.js' => [
+        'path' => './vendor/tacman/ux-search/assets/dist/controllers/refinement-list_controller.js',
     ],
-    '@mezcalito/ux-search/dist/controllers/range-slider_controller.js' => [
-        'path' => './vendor/mezcalito/ux-search/assets/dist/controllers/range-slider_controller.js',
+    '@tacman/ux-search/dist/controllers/range-slider_controller.js' => [
+        'path' => './vendor/tacman/ux-search/assets/dist/controllers/range-slider_controller.js',
     ],
-    '@mezcalito/ux-search/dist/default.min.css' => [
-        'path' => './vendor/mezcalito/ux-search/assets/dist/default.min.css',
+    '@tacman/ux-search/dist/default.min.css' => [
+        'path' => './vendor/tacman/ux-search/assets/dist/default.min.css',
         'type' => 'css',
     ],
     '@hotwired/stimulus' => [

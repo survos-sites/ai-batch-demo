@@ -16,10 +16,13 @@
                 "fetch": "eager"
             }
         },
-        "@mezcalito/ux-search": {
+        "@tacman/ux-search": {
             "ux-search": {
                 "enabled": true,
-                "fetch": "eager"
+                "fetch": "eager",
+                "autoimport": {
+                    "@tacman/ux-search/dist/default.min.css": true
+                }
             },
             "ux-search--refinement-list": {
                 "enabled": true,
